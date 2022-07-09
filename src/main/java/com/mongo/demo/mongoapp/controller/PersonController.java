@@ -2,6 +2,7 @@ package com.mongo.demo.mongoapp.controller;
 
 import com.mongo.demo.mongoapp.collection.Person;
 import com.mongo.demo.mongoapp.service.PersonServiceImpl;
+import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -49,5 +50,15 @@ public class PersonController {
             @RequestParam Integer maxAge
     ) {
         return personService.getAllPersonAgeBetween(minAge , maxAge);
+    }
+
+    @GetMapping("/oldestPerson")
+    public List<Document> oldestPerson() {
+        return personService.getOldestPersonByCity();
+    }
+
+    @GetMapping("/numberOfPersonByCity")
+    public List<Document> numberOfPersonByCity() {
+        return personService.getNumberOfPersonByCity();
     }
 }

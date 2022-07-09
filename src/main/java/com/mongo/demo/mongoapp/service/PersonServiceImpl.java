@@ -31,7 +31,7 @@ public class PersonServiceImpl {
 
     public String save(Person p){
         Person saved = personRepository.save(p);
-        List<Person> lsPerson = new ArrayList<>();
+    /*    List<Person> lsPerson = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             Person p1 = Person.builder().hobbies(Arrays.asList("Cricket")).firstName("Test "+i).lastName(" Last "+i)
                     .age(10+i).addresses(Arrays.asList(Address.builder()
@@ -59,7 +59,7 @@ public class PersonServiceImpl {
                     .build();
             lsPerson.add(p1);
         }
-        personRepository.saveAll(lsPerson);
+        personRepository.saveAll(lsPerson);*/
         return saved.getPersonId();
     }
 
@@ -68,7 +68,6 @@ public class PersonServiceImpl {
     }
 
     public List<Person>  getPersonsStartsWith(String startChar) {
-        getOldestPersonByCityAsc();
         return personRepository.findByFirstNameStartingWith(startChar);
     }
 
@@ -94,22 +93,26 @@ public class PersonServiceImpl {
 
         return pages;
     }
-    public  void getOldestPersonByCityAsc() {
+    public  List<Document> getNumberOfPersonByCity() {
         UnwindOperation unwindOperation = unwind("addresses");
         GroupOperation groupOperation = Aggregation.group("addresses.city").count().as("popCount");
         SortOperation sortOperation = sort(Sort.Direction.DESC,"popCount");
-        Aggregation aggregation = newAggregation(unwindOperation , groupOperation,sortOperation);
-        List<Document> document = mongoTemplate.aggregate(aggregation,Person.class, org.bson.Document.class).getMappedResults();
-        for (Document single: document) {
-            System.out.println("City :"+single.getString("_id") +" , Count :"+single.getInteger("popCount"));
-        }
-        UnwindOperation unwindResponse =Aggregation.unwind("addresses");
-        sortOperation = sort(Sort.Direction.DESC,"age");
-        groupOperation = Aggregation.group("addresses.city").first(Aggregation.ROOT).as("oldMan");;
+        ProjectionOperation projectionOperation =  project().
+                andExpression("_id").as("city")
+                .andExpression("popCount").as("count")
+                .andExclude("_id");
 
-       // ProjectionOperation projectionOperation = project().;
-         aggregation = newAggregation(unwindResponse,sortOperation,groupOperation);
+        Aggregation aggregation = newAggregation(unwindOperation , groupOperation,sortOperation,projectionOperation);
+        List<Document> document = mongoTemplate.aggregate(aggregation,Person.class, org.bson.Document.class).getMappedResults();
+        return document;
+    }
+
+    public  List<Document> getOldestPersonByCity() {
+        UnwindOperation unwindResponse =Aggregation.unwind("addresses");
+        SortOperation sortOperation = sort(Sort.Direction.DESC,"age");
+        GroupOperation groupOperation = Aggregation.group("addresses.city").first(Aggregation.ROOT).as("oldMan");;
+        Aggregation aggregation = newAggregation(unwindResponse,sortOperation,groupOperation);
         List<Document> person = mongoTemplate.aggregate(aggregation,Person.class, Document.class).getMappedResults();
-        System.out.println("::"+person);
+        return person;
     }
 }
