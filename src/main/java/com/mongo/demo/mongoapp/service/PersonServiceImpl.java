@@ -3,10 +3,13 @@ package com.mongo.demo.mongoapp.service;
 import com.mongo.demo.mongoapp.collection.Address;
 import com.mongo.demo.mongoapp.collection.Person;
 import com.mongo.demo.mongoapp.repository.PersonRepository;
+import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.support.PageableExecutionUtils;
@@ -15,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 @Service
 public class PersonServiceImpl {
@@ -63,6 +68,7 @@ public class PersonServiceImpl {
     }
 
     public List<Person>  getPersonsStartsWith(String startChar) {
+        getOldestPersonByCityAsc();
         return personRepository.findByFirstNameStartingWith(startChar);
     }
 
@@ -85,7 +91,25 @@ public class PersonServiceImpl {
         }
         Page<Person> pages = PageableExecutionUtils.getPage(mongoTemplate.find(query, Person.class)
         ,pageable , () -> mongoTemplate.count(query.skip(0).limit(0), Person.class));
+
         return pages;
     }
+    public  void getOldestPersonByCityAsc() {
+        UnwindOperation unwindOperation = unwind("addresses");
+        GroupOperation groupOperation = Aggregation.group("addresses.city").count().as("popCount");
+        SortOperation sortOperation = sort(Sort.Direction.DESC,"popCount");
+        Aggregation aggregation = newAggregation(unwindOperation , groupOperation,sortOperation);
+        List<Document> document = mongoTemplate.aggregate(aggregation,Person.class, org.bson.Document.class).getMappedResults();
+        for (Document single: document) {
+            System.out.println("City :"+single.getString("_id") +" , Count :"+single.getInteger("popCount"));
+        }
+        UnwindOperation unwindResponse =Aggregation.unwind("addresses");
+        sortOperation = sort(Sort.Direction.DESC,"age");
+        groupOperation = Aggregation.group("addresses.city").first(Aggregation.ROOT).as("oldMan");;
 
+       // ProjectionOperation projectionOperation = project().;
+         aggregation = newAggregation(unwindResponse,sortOperation,groupOperation);
+        List<Document> person = mongoTemplate.aggregate(aggregation,Person.class, Document.class).getMappedResults();
+        System.out.println("::"+person);
+    }
 }

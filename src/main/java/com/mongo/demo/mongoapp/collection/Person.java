@@ -19,7 +19,7 @@ public class Person {
     private String personId;
     private String firstName;
     private String lastName;
-    private int age;
+    private Integer age;
     private List<String> hobbies;
     private List<Address> addresses;
 }
